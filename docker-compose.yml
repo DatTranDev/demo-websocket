@@ -49,8 +49,8 @@ services:
       - websocket_network
     volumes:
       # Mount source code for hot reload during development
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend
+      - /node_modules
 
 # Define network for inter-container communication
 networks:
