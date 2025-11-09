@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database Service
+  # This service runs the PostgreSQL database for storing messages
+  postgres:
+    image: postgres:15-alpine
+    container_name: websocket_db
+    environment:
+      # Database credentials
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: websocket_demo
+    ports:
+      # Expose PostgreSQL on port 5432
+      - "5432:5432"
+    volumes:
+      # Persist database data
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - websocket_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d websocket_demo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js Backend Service
+  # This service runs the Express server with Socket.io for WebSocket communication
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: websocket_backend
+    ports:
+      # Expose backend API on port 3000
+      - "3000:3000"
+    environment:
+      # Database connection string
+      DATABASE_URL: postgresql://admin:admin123@postgres:5432/websocket_demo
+      # Server port
+      PORT: 3000
+      # Node environment
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - websocket_network
+    volumes:
+      # Mount source code for hot reload during development
+      - ./backend:/app
+      - /app/node_modules
+
+# Define network for inter-container communication
+networks:
+  websocket_network:
+    driver: bridge
+
+# Define volumes for data persistence
+volumes:
+  postgres_data:
