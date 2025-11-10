@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#1e90ff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.websocketdemo.app"
@@ -21,10 +23,19 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e90ff"
       },
-      "package": "com.websocketdemo.app"
+      "package": "com.websocketdemo.app",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "16d7a4e6-8b3c-4b53-ab7b-73c9819628a7"
+      }
     }
   }
 }

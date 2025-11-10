@@ -27,8 +27,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
 } from "react-native";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import io from "socket.io-client";
 
 // Backend server URL - IMPORTANT: Change this to your computer's IP address
@@ -38,7 +40,122 @@ import io from "socket.io-client";
 // For Expo on physical device: MUST use your computer's local IP (not localhost)
 // For Android emulator: use http://10.0.2.2:3000
 // For iOS simulator: use http://localhost:3000
-const SOCKET_URL = "https://demo-websocket-e3dh.vercel.app"; // ⚠️ CHANGE THIS TO YOUR IP!
+const SOCKET_URL = "https://demo-websocket-3fom.onrender.com"; // ⚠️ CHANGE THIS TO YOUR IP!
+
+/**
+ * Avatar Component - Generate colorful avatar from username
+ */
+function Avatar({ username, size = 40 }) {
+  // Generate color from username
+  const getColorFromString = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+      ["#FF6B6B", "#FF8E53"],
+      ["#4ECDC4", "#44A08D"],
+      ["#A8E6CF", "#3EECAC"],
+      ["#FFD93D", "#FF9A3D"],
+      ["#6C5CE7", "#A29BFE"],
+      ["#FD79A8", "#FDCB6E"],
+      ["#74B9FF", "#0984E3"],
+      ["#55EFC4", "#00B894"],
+    ];
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
+  const colors = getColorFromString(username);
+  const initial = username.charAt(0).toUpperCase();
+
+  return (
+    <LinearGradient
+      colors={colors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.avatar,
+        { width: size, height: size, borderRadius: size / 2 },
+      ]}
+    >
+      <Text style={[styles.avatarText, { fontSize: size * 0.5 }]}>
+        {initial}
+      </Text>
+    </LinearGradient>
+  );
+}
+
+/**
+ * Typing Indicator Component with animated dots
+ */
+function TypingIndicator({ username }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const createAnimation = (dot, delay) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const animation1 = createAnimation(dot1, 0);
+    const animation2 = createAnimation(dot2, 200);
+    const animation3 = createAnimation(dot3, 400);
+
+    animation1.start();
+    animation2.start();
+    animation3.start();
+
+    return () => {
+      animation1.stop();
+      animation2.stop();
+      animation3.stop();
+    };
+  }, []);
+
+  const animatedStyle = (dot) => ({
+    opacity: dot.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 1],
+    }),
+    transform: [
+      {
+        translateY: dot.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -5],
+        }),
+      },
+    ],
+  });
+
+  return (
+    <View style={styles.typingContainer}>
+      <Avatar username={username} size={32} />
+      <View style={styles.typingBubble}>
+        <View style={styles.typingDots}>
+          <Animated.View style={[styles.typingDot, animatedStyle(dot1)]} />
+          <Animated.View style={[styles.typingDot, animatedStyle(dot2)]} />
+          <Animated.View style={[styles.typingDot, animatedStyle(dot3)]} />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function App() {
   // State management
@@ -109,7 +226,12 @@ function App() {
 
     // Someone is typing
     socket.on("user_typing", (data) => {
+      console.log("⌨️ User typing:", data.username);
       setTypingUser(data.username);
+      // Auto-scroll to show typing indicator
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
       // Clear typing indicator after 3 seconds
       setTimeout(() => setTypingUser(""), 3000);
     });
@@ -191,6 +313,7 @@ function App() {
 
     // Emit typing event
     if (text.length > 0) {
+      console.log("⌨️ Emitting typing event:", username);
       socketRef.current?.emit("typing", { username });
 
       // Clear previous timeout
@@ -200,6 +323,7 @@ function App() {
 
       // Stop typing after 2 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
+        console.log("⌨️ Stop typing event:", username);
         socketRef.current?.emit("stop_typing", { username });
       }, 2000);
     } else {
@@ -264,27 +388,36 @@ function App() {
    */
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1e90ff" />
+      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>WebSocket Chat</Text>
-        <View style={styles.headerInfo}>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: isConnected ? "#4caf50" : "#f44336" },
-            ]}
-          />
-          <Text style={styles.headerText}>
-            {userCount} user{userCount !== 1 ? "s" : ""} online
-          </Text>
+      {/* Header with Gradient */}
+      <LinearGradient
+        colors={["#667eea", "#764ba2"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>WebSocket Chat</Text>
+            <View style={styles.headerInfo}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: isConnected ? "#4caf50" : "#f44336" },
+                ]}
+              />
+              <Text style={styles.headerText}>
+                {userCount} user{userCount !== 1 ? "s" : ""} online
+              </Text>
+            </View>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView
         style={styles.chatContainer}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Messages List */}
@@ -292,53 +425,76 @@ function App() {
           ref={scrollViewRef}
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
-          onContentSizeChange={() =>
-            scrollViewRef.current?.scrollToEnd({ animated: true })
-          }
         >
           {messages.length === 0 ? (
             <Text style={styles.emptyText}>
               No messages yet. Start the conversation!
             </Text>
           ) : (
-            messages.map((msg, index) => (
-              <View
-                key={msg.id || index}
-                style={[
-                  styles.messageItem,
-                  msg.username === username
-                    ? styles.myMessage
-                    : styles.otherMessage,
-                ]}
-              >
-                <Text style={styles.messageUsername}>{msg.username}</Text>
-                <Text style={styles.messageContent}>{msg.content}</Text>
-                <Text style={styles.messageTime}>
-                  {formatTime(msg.created_at)}
-                </Text>
-              </View>
-            ))
+            messages.map((msg, index) => {
+              const isMyMessage = msg.username === username;
+              return (
+                <View
+                  key={msg.id || index}
+                  style={[
+                    styles.messageRow,
+                    isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
+                  ]}
+                >
+                  {!isMyMessage && <Avatar username={msg.username} size={36} />}
+                  <View
+                    style={[
+                      styles.messageItem,
+                      isMyMessage ? styles.myMessage : styles.otherMessage,
+                    ]}
+                  >
+                    {!isMyMessage && (
+                      <Text style={styles.messageUsername}>{msg.username}</Text>
+                    )}
+                    <Text
+                      style={[
+                        styles.messageContent,
+                        isMyMessage && styles.myMessageText,
+                      ]}
+                    >
+                      {msg.content}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.messageTime,
+                        isMyMessage && styles.myMessageText,
+                      ]}
+                    >
+                      {formatTime(msg.created_at)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })
           )}
 
-          {/* Typing Indicator */}
-          {typingUser && typingUser !== username && (
-            <Text style={styles.typingIndicator}>
-              {typingUser} is typing...
-            </Text>
-          )}
+          {/* Typing Indicator with Animation */}
+          {(() => {
+            console.log("Typing user:", typingUser, "Current user:", username);
+            return typingUser && typingUser !== username ? (
+              <TypingIndicator username={typingUser} />
+            ) : null;
+          })()}
         </ScrollView>
 
         {/* Input Area */}
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor="#999"
-            value={message}
-            onChangeText={handleMessageChange}
-            multiline
-            maxLength={500}
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type a message..."
+              placeholderTextColor="#999"
+              value={message}
+              onChangeText={handleMessageChange}
+              multiline
+              maxLength={500}
+            />
+          </View>
           <TouchableOpacity
             style={[
               styles.sendButton,
@@ -347,7 +503,7 @@ function App() {
             onPress={handleSendMessage}
             disabled={!message.trim()}
           >
-            <Text style={styles.sendButtonText}>Send</Text>
+            <Text style={styles.sendButtonText}>➤</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -361,7 +517,20 @@ function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f0f2f5",
+  },
+  avatar: {
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  avatarText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   loginContainer: {
     flex: 1,
@@ -420,16 +589,24 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   header: {
-    backgroundColor: "#1e90ff",
-    padding: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#fff",
+    marginBottom: 4,
   },
   headerInfo: {
     flexDirection: "row",
@@ -437,7 +614,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 13,
+    opacity: 0.9,
   },
   chatContainer: {
     flex: 1,
@@ -446,82 +624,139 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesContent: {
-    padding: 15,
+    padding: 10,
+    paddingBottom: 5,
   },
   emptyText: {
     textAlign: "center",
     color: "#999",
     fontSize: 16,
-    marginTop: 50,
+    marginTop: 20,
+  },
+  messageRow: {
+    flexDirection: "row",
+    marginBottom: 12,
+    paddingHorizontal: 5,
+  },
+  myMessageRow: {
+    justifyContent: "flex-end",
+  },
+  otherMessageRow: {
+    justifyContent: "flex-start",
+    gap: 8,
   },
   messageItem: {
-    maxWidth: "80%",
+    maxWidth: "75%",
     padding: 12,
-    borderRadius: 15,
-    marginBottom: 10,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
   myMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#1e90ff",
+    backgroundColor: "#667eea",
+    borderBottomRightRadius: 4,
   },
   otherMessage: {
-    alignSelf: "flex-start",
     backgroundColor: "#fff",
+    borderBottomLeftRadius: 4,
+  },
+  myMessageText: {
+    color: "#fff",
   },
   messageUsername: {
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 11,
+    fontWeight: "600",
     marginBottom: 4,
-    opacity: 0.8,
+    color: "#667eea",
   },
   messageContent: {
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: 15,
+    marginBottom: 6,
+    color: "#2d3436",
+    lineHeight: 20,
   },
   messageTime: {
     fontSize: 10,
-    opacity: 0.6,
+    opacity: 0.5,
     alignSelf: "flex-end",
+    color: "#636e72",
   },
-  typingIndicator: {
-    fontSize: 14,
-    fontStyle: "italic",
-    color: "#666",
-    marginLeft: 10,
+  typingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingHorizontal: 5,
+    gap: 8,
+  },
+  typingBubble: {
+    backgroundColor: "#f1f3f4",
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  typingDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 16,
+  },
+  typingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: "#667eea",
+    marginHorizontal: 2,
   },
   inputContainer: {
     flexDirection: "row",
     padding: 10,
+    paddingHorizontal: 12,
     backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: "#ddd",
+    borderTopColor: "#e1e8ed",
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  inputWrapper: {
+    flex: 1,
+    backgroundColor: "#f5f7fa",
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   input: {
-    flex: 1,
-    minHeight: 40,
+    minHeight: 38,
     maxHeight: 100,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
-    marginRight: 10,
+    fontSize: 15,
+    color: "#2d3436",
   },
   sendButton: {
-    backgroundColor: "#1e90ff",
-    borderRadius: 20,
-    paddingHorizontal: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#667eea",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#667eea",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   sendButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#dfe6e9",
+    shadowOpacity: 0,
   },
   sendButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "bold",
   },
 });
