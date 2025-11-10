@@ -19,6 +19,6 @@ services:
   # PostgreSQL Database
   - type: pserv
     name: websocket-db
-    runtime: postgresql
+    plan: free
     databaseName: websocket_demo
     user: admin
