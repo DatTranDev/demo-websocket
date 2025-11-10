@@ -11,7 +11,11 @@ const http = require("http");
 const socketIo = require("socket.io");
 const { Pool } = require("pg");
 const cors = require("cors");
-require("dotenv").config();
+
+// Load .env only in development (production uses environment variables)
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
 
 // Initialize Express app
 const app = express();
@@ -28,6 +32,19 @@ const io = socketIo(server, {
 // Middleware setup
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Parse JSON request bodies
+
+// Validate DATABASE_URL exists
+if (!process.env.DATABASE_URL) {
+  console.error("❌ ERROR: DATABASE_URL environment variable is not set!");
+  console.error("Please set DATABASE_URL in your environment or .env file");
+  process.exit(1);
+}
+
+// Log database connection info (without showing password)
+console.log(
+  "🔗 Database connection:",
+  process.env.DATABASE_URL.replace(/:[^:@]+@/, ":****@")
+);
 
 // PostgreSQL connection pool
 // Pool manages multiple database connections efficiently
