@@ -1,0 +1,40 @@
+# Ignore mobile app directory
+mobile/
+
+# Ignore documentation
+*.md
+!README.md
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore node_modules (will be installed in container)
+node_modules/
+
+# Ignore environment files (use Render env vars)
+.env
+.env.local
+
+# Ignore logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore Docker files
+docker-compose.yml
+backend/Dockerfile
+backend/.dockerignore
+
+# Ignore scripts
+*.ps1

@@ -38,7 +38,7 @@ import io from "socket.io-client";
 // For Expo on physical device: MUST use your computer's local IP (not localhost)
 // For Android emulator: use http://10.0.2.2:3000
 // For iOS simulator: use http://localhost:3000
-const SOCKET_URL = "http://192.168.32.1:3000"; // ⚠️ CHANGE THIS TO YOUR IP!
+const SOCKET_URL = "https://demo-websocket-e3dh.vercel.app"; // ⚠️ CHANGE THIS TO YOUR IP!
 
 function App() {
   // State management
